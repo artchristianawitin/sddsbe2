@@ -6,12 +6,12 @@
 {
     protected function successResponse($data, $code = Response::HTTP_OK)
     {
-        return response()->json(['data'=>$data],$code);
+        return response()->json(['data'=> $data, 'site' => 2],$code);
     }
 
     protected function errorResponse($message,$code)
     {
-        return response()->json(['error'=>$message,'code'=>$code],$code);
+        return response()->json(['error'=>$message,'site'=> 2, 'code' => $code], $code);
     }
 }
 

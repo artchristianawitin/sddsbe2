@@ -5,7 +5,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response; 
 use App\Models\User;
 use App\Traits\ApiResponser;
-
+use App\Models\UserJob;
 
 Class UserController extends Controller {
 use ApiResponser;
@@ -19,13 +19,13 @@ public function loginPage(){
 }
 
 public function getUser($id){
-    $user = app('db')->select("SELECT * FROM tbluser WHERE id=".$id);
+    $user = app('db')->select("SELECT * FROM tbluser2 WHERE id=".$id);
     if($user == null) return response()->json('No user found in the database');
     return response()->json($user,200);
 }
 
 public function getUsers(){
-    $users = app('db')->select("SELECT * FROM tbluser");
+    $users = app('db')->select("SELECT * FROM tbluser2");
     return response()->json($users,200);
     }
 
@@ -34,7 +34,7 @@ public function getUsers(){
         $username = $_POST['username'];
         $password = $_POST['password'];
 
-        $user = app('db')->select("SELECT * FROM tbluser WHERE username='$username' and password='$password'");
+        $user = app('db')->select("SELECT * FROM tbluser2 WHERE username='$username' and password='$password'");
 
         if(empty($user)){
             return 'Doesnt Exists in the Database or Incorrect Credentials.';
@@ -52,40 +52,49 @@ public function getUsers(){
 
         $rules = [
             'username' => 'required|max:20',
-            'password' => 'required:max:20'
+            'password' => 'required:max:20',
+            'jobid' => 'required|numeric|min:1|not_in:0',
         ];
 
-        $this->validate($this->request, $rules);
-        $users = new User;
+        $this->validate($request, $rules);
 
-        $users->username = $this->request->username;
-        $users->password = $this->request->password;
+        //validate if jobid is found in the tbluserjob
+        $userjob=UserJob::findOrFail($request->jobid);
+        $users = User::create($request->all());
 
-        $users->save(); 
-        return response()->json($users,200);
+        return $this->successResponse($users, Response::HTTP_CREATED);
     }
 
 
+
     // Update User
-    public function updateUser($id){
+    public function updateUser(Request $request, $id){
 
         $rules = [
-            'username' => 'required|max:20',
-            'password' => 'required:max:20'
+            'jobid' => 'required|numeric|min:1|not_in:0',
         ];
+        $this->validate($request,$rules); 
+        $userjob = UserJob::findOrFail($request->jobid);
+  
+        $users = User::find($id);
 
-        $this->validate($this->request, $rules);
+        
+        if($request->input('password') == null){
+            $users->username = $request->input('username');
+            $request->input = $users->password;
+            $users->jobid= $request->jobid;
+        }else if($request->input('username') == null ){
+            $users->password = $request->input('password');
+            $request->username = $users->username;
+            $users->jobid= $request->jobid;
+        }else{
+            $users->username = $request->input('username');
+            $users->password = $request->input('password');
+            $users->jobid= $request->jobid;
+        }
+        $users->save();
 
-        $user = User::find($id);
-
-        if($user == null) return response()->json('Doesnt exist in the database',404);
-
-        $user->username = $this->request->username;
-        $user->password = $this->request->password;
-
-        $user->save();
-
-        return response()->json($user,200);
+        return $this->successResponse('User Updated Successfully',Response::HTTP_OK);
     }
     
     public function deleteUser($id){
